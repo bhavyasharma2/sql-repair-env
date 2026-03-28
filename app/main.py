@@ -33,7 +33,7 @@ app = FastAPI(
 )
 
 LANDING_PAGE = open(
-    os.path.join(os.path.dirname(__file__), "..", "landing.html")
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "landing.html")
 ).read()
 
 
