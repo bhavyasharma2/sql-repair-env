@@ -32,9 +32,10 @@ app = FastAPI(
     version="1.0.0",
 )
 
-LANDING_PAGE = open(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "landing.html")
-).read()
+try:
+    LANDING_PAGE = open("/app/landing.html").read()
+except FileNotFoundError:
+    LANDING_PAGE = "<h1>SQL Repair OpenEnv</h1><p><a href='/docs'>API Docs</a></p>"
 
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
