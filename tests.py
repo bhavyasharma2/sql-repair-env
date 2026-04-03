@@ -17,7 +17,7 @@ Tests cover:
 
 import sys
 
-# ── Graceful import handling ──────────────────────────────────────────────────
+#import:
 try:
     from fastapi.testclient import TestClient
     from app.main import app
@@ -32,7 +32,7 @@ except ImportError as e:
     HAS_DEPS = False
 
 
-# ── Correct queries (used throughout) ────────────────────────────────────────
+#correct queries (used throughout):
 
 CORRECT = {
     "task_easy": (
@@ -79,9 +79,7 @@ CORRECT = {
 }
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  SECTION 1 — Reward logic (no DB needed)
-# ══════════════════════════════════════════════════════════════════════════════
+#SECTION 1 — Reward logic (no DB needed)
 
 def test_reward_weights_sum_to_one():
     """Reward component weights must sum to exactly 1.0."""
@@ -157,9 +155,9 @@ def test_results_match_case_insensitive():
     print("  PASS  case-insensitive string comparison")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
+
 #  SECTION 2 — Graders (requires duckdb)
-# ══════════════════════════════════════════════════════════════════════════════
+
 
 def test_grader_correct_queries_score_1():
     """Correct queries must score 1.0 on all three tasks."""
@@ -209,9 +207,8 @@ def test_grade_all():
     print("  PASS  grade_all returns avg=1.0 for all correct queries")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  SECTION 3 — Environment (requires duckdb + pydantic)
-# ══════════════════════════════════════════════════════════════════════════════
+
 
 def test_env_reset_returns_observation():
     env = SQLRepairEnv()
@@ -303,9 +300,8 @@ def test_env_full_episode_hard():
     print("  PASS  full hard episode: exact match in 1 step with correct query")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  SECTION 4 — API endpoints (TestClient)
-# ══════════════════════════════════════════════════════════════════════════════
+
 
 def test_api_health():
     client = TestClient(app)
@@ -390,9 +386,8 @@ def test_api_reset_invalid_task():
     print("  PASS  POST /reset with invalid task_id → 400")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 #  Runner
-# ══════════════════════════════════════════════════════════════════════════════
+
 
 SECTIONS = [
     ("Reward logic", [

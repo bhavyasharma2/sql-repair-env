@@ -18,7 +18,7 @@ from app.tasks import TASKS
 from app.rewards import compute_reward
 
 
-MAX_STEPS = 5  # agent gets up to 5 attempts per episode
+MAX_STEPS = 5  #agent gets up to 5 attempts per episode
 
 
 class SQLRepairEnv:
@@ -32,7 +32,7 @@ class SQLRepairEnv:
         self._last_exec_result: str | None = None
         self._last_reward: float | None = None
 
-    # ── reset ─────────────────────────────────────────────────────────────────
+    #reset: 
 
     def reset(self, task_id: str = "task_easy") -> Observation:
         """
@@ -54,14 +54,14 @@ class SQLRepairEnv:
         self._last_exec_result = None
         self._last_reward = None
 
-        # Fresh isolated database for this episode
+        #fresh isolated database for this episode
         self._conn = duckdb.connect(":memory:")
         self._conn.execute(self._task["schema_sql"])
         self._conn.execute(self._task["seed_sql"])
 
         return self._build_observation()
 
-    # ── step ──────────────────────────────────────────────────────────────────
+    #step:
 
     def step(self, action: Action) -> tuple[Observation, Reward, bool, dict]:
         """
@@ -76,7 +76,7 @@ class SQLRepairEnv:
         self._step_number += 1
         self._last_action = action.query
 
-        # ── Execute the submitted query ────────────────────────────────────
+        #executes the submitted query:
         execution_result: list[dict] | None = None
         execution_error: str | None = None
 
@@ -90,7 +90,7 @@ class SQLRepairEnv:
             execution_error = str(exc)
             self._last_exec_result = f"ERROR: {execution_error}"
 
-        # ── Compute reward ─────────────────────────────────────────────────
+        #computes rewards:
         reward = compute_reward(
             query=action.query,
             execution_result=execution_result,
@@ -102,8 +102,8 @@ class SQLRepairEnv:
         if reward.total > self._best_reward:
             self._best_reward = reward.total
 
-        # ── Episode termination ────────────────────────────────────────────
-        # Done if: exact match achieved, or max steps reached
+        #termination of episode:
+        #done if: exact match achieved, or max steps reached
         self._done = reward.exact_match or (self._step_number >= MAX_STEPS)
 
         obs = self._build_observation()
@@ -116,7 +116,7 @@ class SQLRepairEnv:
 
         return obs, reward, self._done, info
 
-    # ── state ─────────────────────────────────────────────────────────────────
+    #state:
 
     def state(self) -> EnvState:
         """Return the current internal state (for /state endpoint)."""
@@ -132,7 +132,7 @@ class SQLRepairEnv:
             current_query=self._last_action,
         )
 
-    # ── Helpers ───────────────────────────────────────────────────────────────
+    #helpers:
 
     def _build_observation(self) -> Observation:
         assert self._task is not None

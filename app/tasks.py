@@ -14,7 +14,7 @@ from typing import Any
 
 TASKS: dict[str, dict[str, Any]] = {
 
-    # ── TASK 1 — EASY ─────────────────────────────────────────────────────────
+    #TASK 1 — EASY
     # Broken query has two syntax errors:
     #   1. missing comma in SELECT list
     #   2. FORM instead of FROM
@@ -60,7 +60,7 @@ ORDER BY salary DESC;
     },
 
 
-    # ── TASK 2 — MEDIUM ───────────────────────────────────────────────────────
+    #TASK 2 — MEDIUM
     # Schema: orders + customers + products (3-table join)
     # Broken query uses INNER JOIN where a LEFT JOIN is needed,
     # AND filters on the wrong column alias, causing wrong rows.
@@ -118,7 +118,7 @@ ORDER BY total_value DESC;
     },
 
 
-    # ── TASK 3 — HARD ─────────────────────────────────────────────────────────
+    #TASK 3 — HARD
     # Schema: sales + products + regions (3-table join with window function)
     # Broken query uses ROW_NUMBER() partitioned by the wrong column —
     # it partitions by product_id instead of region_id, so instead of
@@ -202,7 +202,7 @@ ORDER BY region_name ASC;
     },
 
 
-    # ── TASK 4 — EXPERT ───────────────────────────────────────────────────────
+    #TASK 4 — EXPERT
     # Schema: employees table with manager_id (org hierarchy)
     # Broken recursive CTE traverses the org chart but has TWO bugs:
     #   1. The anchor selects WHERE manager_id IS NOT NULL instead of IS NULL

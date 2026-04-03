@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Any, Optional
 
 
-# ── Action ────────────────────────────────────────────────────────────────────
+#action:
 
 class Action(BaseModel):
     """
@@ -15,7 +15,7 @@ class Action(BaseModel):
     )
 
 
-# ── Observation ───────────────────────────────────────────────────────────────
+#observation:
 
 class Observation(BaseModel):
     """
@@ -37,7 +37,7 @@ class Observation(BaseModel):
     max_steps: int = Field(5, description="Maximum steps allowed per episode")
 
 
-# ── Reward ────────────────────────────────────────────────────────────────────
+#reward:
 
 class Reward(BaseModel):
     """
@@ -54,7 +54,7 @@ class Reward(BaseModel):
     )
 
 
-# ── State (internal, returned by /state endpoint) ─────────────────────────────
+#state (internal, returned by /state endpoint)
 
 class EnvState(BaseModel):
     task_id: str

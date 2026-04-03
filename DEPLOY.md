@@ -19,8 +19,8 @@ validation (HF Space deploys, /health returns 200, /reset responds).
 ```bash
 pip install huggingface_hub
 huggingface-cli login
-# Paste your HF token when prompted
-# Get your token at: https://huggingface.co/settings/tokens
+#paste HF token when prompted
+#token at: https://huggingface.co/settings/tokens
 ```
 
 ---
@@ -54,8 +54,8 @@ This is required for the hackathon's automated discovery.
 ## Step 4 — Clone the Space repo locally
 
 ```bash
-# Replace YOUR_USERNAME with your HF username
-git clone https://huggingface.co/spaces/YOUR_USERNAME/sql-repair-env
+#replace YOUR_USERNAME with your HF username
+git clone https://huggingface.co/spaces/iambhavyaa/sql-repair-env
 cd sql-repair-env
 ```
 
@@ -67,7 +67,7 @@ cd sql-repair-env
 # From the parent directory of both folders:
 cp -r ../sql-repair-env/* .
 
-# Your folder should now look like:
+# The folder looks like:
 # .
 # ├── app/
 # │   ├── __init__.py
@@ -82,6 +82,7 @@ cp -r ../sql-repair-env/* .
 # ├── tests.py
 # ├── openenv.yaml
 # ├── Dockerfile
+# ├── inference.py
 # ├── requirements.txt
 # └── README.md
 ```
@@ -114,7 +115,7 @@ HF Spaces will automatically:
   1. Detect the Dockerfile
   2. Run: docker build
   3. Run: docker run -p 7860:7860
-  4. Expose your Space at: https://YOUR_USERNAME-sql-repair-env.hf.space
+  4. Expose your Space at: https://iambhavyaa-sql-repair-env.hf.space
 
 The build takes ~2-3 minutes. Watch the build logs in the "Logs" tab.
 
@@ -125,7 +126,7 @@ The build takes ~2-3 minutes. Watch the build logs in the "Logs" tab.
 Once the Space shows "Running" (green dot):
 
 ```bash
-BASE=https://YOUR_USERNAME-sql-repair-env.hf.space
+BASE=https://iambhavyaa-sql-repair-env.hf.space
 
 # 1. Health check
 curl $BASE/health
@@ -156,7 +157,7 @@ All four must succeed for the hackathon pre-submission checklist to pass.
 ## Step 9 — Submit
 
 In the hackathon submission form, enter:
-  - HF Space URL: https://huggingface.co/spaces/YOUR_USERNAME/sql-repair-env
+  - HF Space URL: https://huggingface.co/spaces/iambhavyaa/sql-repair-env
   - GitHub repo URL: (your repo if you have one)
 
 ---

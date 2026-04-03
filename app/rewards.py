@@ -52,13 +52,13 @@ def compute_reward(
     row_count_correct = False
     exact_match = False
 
-    # ── 1. Syntax validity ────────────────────────────────────────────────────
-    # We consider the query syntactically valid if it's non-empty and doesn't
-    # contain an obvious parse-level failure. The real parse check happens
-    # during execution; we infer syntax validity from the error message.
+    #1. Syntax validity:
+    #we consider the query syntactically valid if it's non-empty and doesn't 
+    #contain an obvious parse-level failure. The real parse check happens
+    #during execution; we infer syntax validity from the error message.
     if query and query.strip():
         syntax_valid = True
-        # Downgrade if execution error looks like a parse error
+        #downgrade if execution error looks like a parse error
         if execution_error and any(
             kw in execution_error.lower()
             for kw in ("syntax error", "parser error", "unexpected token", "expected")
@@ -68,19 +68,19 @@ def compute_reward(
     if syntax_valid:
         breakdown["syntax_valid"] = 0.20
 
-    # ── 2. Executes without error ─────────────────────────────────────────────
+    #2. Executes without error:
     if execution_error is None and execution_result is not None:
         executes = True
         breakdown["executes"] = 0.30
 
-    # ── 3. Row count matches ground truth ─────────────────────────────────────
+    #3. Row count matches ground truth:
     if executes and execution_result is not None:
         if len(execution_result) == len(ground_truth):
             row_count_correct = True
             breakdown["row_count_correct"] = 0.30
 
-    # ── 4. Exact match ────────────────────────────────────────────────────────
-    # Normalise values: floats compared with tolerance, strings lowercased.
+    #4. Exact match:
+    #normalise values: floats compared with tolerance, strings lowercased.
     if row_count_correct and execution_result is not None:
         if _results_match(execution_result, ground_truth):
             exact_match = True
@@ -98,7 +98,7 @@ def compute_reward(
     )
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+#helpers:
 
 def _results_match(actual: list[dict], expected: list[dict]) -> bool:
     """
@@ -111,7 +111,7 @@ def _results_match(actual: list[dict], expected: list[dict]) -> bool:
         return False
 
     for act_row, exp_row in zip(actual, expected):
-        # Normalise keys to lowercase
+        #normalise keys to lowercase
         act_norm = {k.lower(): v for k, v in act_row.items()}
         exp_norm = {k.lower(): v for k, v in exp_row.items()}
 

@@ -18,7 +18,7 @@ from typing import List, Optional
 from openai import OpenAI
 import requests
 
-# ── Environment variables (mandatory) ────────────────────────────────────────
+#environment variables:
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME   = os.getenv("MODEL_NAME",   "Qwen/Qwen2.5-72B-Instruct")
 HF_TOKEN     = os.getenv("HF_TOKEN")    or os.getenv("OPENAI_API_KEY")
@@ -29,7 +29,7 @@ TASK_IDS     = ["task_easy", "task_medium", "task_hard", "task_expert"]
 MAX_STEPS    = 5
 SUCCESS_SCORE_THRESHOLD = 0.8
 
-# ── Logging (mandatory format) ────────────────────────────────────────────────
+#logging:
 
 def log_start(task: str, env: str, model: str) -> None:
     print(f"[START] task={task} env={env} model={model}", flush=True)
@@ -50,7 +50,7 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> No
         flush=True,
     )
 
-# ── Prompt ────────────────────────────────────────────────────────────────────
+#prompt:
 
 SYSTEM_PROMPT = """You are an expert SQL debugger. You will be given:
 1. A database schema (CREATE TABLE statements)
@@ -83,7 +83,7 @@ def build_prompt(obs: dict) -> str:
     parts.append("Return only the corrected SQL query:")
     return "\n\n".join(parts)
 
-# ── Episode runner ────────────────────────────────────────────────────────────
+#episode runner:
 
 def run_episode(client: OpenAI, task_id: str) -> dict:
     rewards: List[float] = []
@@ -94,7 +94,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
     log_start(task=task_id, env=BENCHMARK, model=MODEL_NAME)
 
     try:
-        # Reset
+        #reset
         resp = requests.post(f"{ENV_URL}/reset", json={"task_id": task_id}, timeout=30)
         resp.raise_for_status()
         obs = resp.json()
@@ -104,7 +104,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
             if done:
                 break
 
-            # Get model's proposed fix
+            #get model's proposed fix
             try:
                 completion = client.chat.completions.create(
                     model=MODEL_NAME,
@@ -116,7 +116,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
                     max_tokens=512,
                 )
                 query = (completion.choices[0].message.content or "").strip()
-                # Strip accidental markdown fences
+                #strip accidental markdown fences
                 for fence in ["```sql", "```SQL", "```"]:
                     if query.startswith(fence):
                         query = query[len(fence):]
@@ -127,7 +127,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
                 query = "SELECT 1"
                 print(f"[DEBUG] Model call failed: {e}", flush=True)
 
-            # Submit action
+            #submit action
             error = None
             reward = 0.0
             try:
@@ -163,7 +163,7 @@ def run_episode(client: OpenAI, task_id: str) -> dict:
     return {"task_id": task_id, "score": score, "success": success}
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+#main:
 
 def main():
     if not HF_TOKEN:

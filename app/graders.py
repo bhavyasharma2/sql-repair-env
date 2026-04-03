@@ -41,7 +41,7 @@ def grade(task_id: str, query: str) -> dict:
 
     task = TASKS[task_id]
 
-    # Isolated DB — no state leaks between grader calls
+    #isolated DB (no state leaks between grader calls)
     conn = duckdb.connect(":memory:")
     conn.execute(task["schema_sql"])
     conn.execute(task["seed_sql"])

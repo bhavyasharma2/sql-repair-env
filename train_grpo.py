@@ -26,7 +26,7 @@ import os
 import sys
 from typing import Any
 
-# ── Argument parsing ──────────────────────────────────────────────────────────
+#argument parsing
 
 parser = argparse.ArgumentParser(description="GRPO training for SQL Repair env")
 parser.add_argument("--task", default="all", choices=["all", "task_easy", "task_medium", "task_hard"])
@@ -42,7 +42,7 @@ parser.add_argument("--output-dir", default="./grpo_output")
 args = parser.parse_args()
 
 
-# ── Imports (after arg parse so --help works without deps) ───────────────────
+#imports (after arg parse so --help works without deps)
 
 try:
     import torch
@@ -57,7 +57,7 @@ except ImportError as e:
     sys.exit(1)
 
 
-# ── Prompt template ───────────────────────────────────────────────────────────
+#prompt template
 
 SYSTEM = (
     "You are an expert SQL debugger. Fix the broken SQL query so it satisfies "
@@ -75,7 +75,7 @@ def make_prompt(task: dict) -> str:
     )
 
 
-# ── Dataset construction ───────────────────────────────────────────────────────
+#dataset construction
 # GRPO needs a prompt dataset. We expand each task into multiple slightly-varied
 # prompts so the model sees enough diversity. For a real run you'd augment with
 # more broken query variants.
@@ -101,7 +101,7 @@ def build_dataset(task_ids: list[str]) -> Dataset:
     return Dataset.from_list(records)
 
 
-# ── Reward function ───────────────────────────────────────────────────────────
+# Reward function 
 # GRPO calls this with a batch of (prompt, completion) pairs.
 # We extract the task_id from the prompt metadata and score via our grader.
 
@@ -150,7 +150,7 @@ def _clean_sql(text: str) -> str:
     return text.strip()
 
 
-# ── Training ──────────────────────────────────────────────────────────────────
+# Training
 
 def train():
     print(f"\n{'='*60}")
@@ -163,16 +163,16 @@ def train():
 
     task_ids = list(TASKS.keys()) if args.task == "all" else [args.task]
 
-    # ── Dataset ──────────────────────────────────────────────────────────────
+    # Dataset 
     dataset = build_dataset(task_ids)
     print(f"Dataset: {len(dataset)} prompts across {len(task_ids)} task(s)\n")
 
-    # ── Tokenizer ─────────────────────────────────────────────────────────────
+    # Tokenizer 
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    # ── GRPO config ───────────────────────────────────────────────────────────
+    # GRPO config
     config = GRPOConfig(
         # Core GRPO
         num_generations=args.group_size,       # G: completions per prompt
@@ -198,7 +198,7 @@ def train():
         kl_coef=0.05,
     )
 
-    # ── Reward wrapper ────────────────────────────────────────────────────────
+    # Reward wrapper 
     # TRL's GRPOTrainer passes extra dataset columns to the reward function.
     # We include task_id in the dataset so the reward fn knows which grader to call.
 
@@ -207,7 +207,7 @@ def train():
         task_ids = kwargs.get("task_id", ["task_easy"] * len(completions))
         return sql_repair_reward(prompts, completions, task_ids)
 
-    # ── Trainer ───────────────────────────────────────────────────────────────
+    # Trainer 
     trainer = GRPOTrainer(
         model=args.model,
         config=config,
@@ -220,7 +220,7 @@ def train():
     print("Watch for reward climbing from ~0.2 (syntax) toward 1.0 (exact match)\n")
     trainer.train()
 
-    # ── Save ──────────────────────────────────────────────────────────────────
+    #Save 
     trainer.save_model(args.output_dir)
     print(f"\nModel saved to {args.output_dir}")
 
@@ -229,7 +229,7 @@ def train():
         trainer.push_to_hub(args.hub_model_id)
         print("Done.")
 
-    # ── Quick eval after training ─────────────────────────────────────────────
+    # Quick eval after training
     print("\n── Post-training evaluation ──")
     _quick_eval(trainer, tokenizer, task_ids)
 
