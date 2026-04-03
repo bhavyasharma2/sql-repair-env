@@ -11,11 +11,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY --chown=user app/ ./app/
 COPY --chown=user baseline.py .
+COPY --chown=user inference.py .
 COPY --chown=user openenv.yaml .
-COPY --chown=user landing.html .
 
 EXPOSE 7860
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
-
-

@@ -12,7 +12,6 @@ Endpoints required by the OpenEnv spec:
 """
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from typing import Optional
 import os
@@ -32,16 +31,6 @@ app = FastAPI(
     version="1.0.0",
 )
 
-try:
-    LANDING_PAGE = open("/app/landing.html").read()
-except FileNotFoundError:
-    LANDING_PAGE = "<h1>SQL Repair OpenEnv</h1><p><a href='/docs'>API Docs</a></p>"
-
-
-@app.get("/", response_class=HTMLResponse, include_in_schema=False)
-def landing():
-    """Landing page — shown at the root URL."""
-    return HTMLResponse(content=LANDING_PAGE)
 
 
 # One environment instance per server process.
