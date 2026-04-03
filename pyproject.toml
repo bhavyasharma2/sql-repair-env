@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "sql-repair-env"
+version = "1.0.0"
+description = "An RL environment where agents learn to fix broken SQL queries"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.115.0",
+    "uvicorn[standard]==0.30.6",
+    "duckdb==1.1.1",
+    "pydantic==2.9.2",
+    "openai==1.51.0",
+    "requests==2.32.3",
+    "pyyaml==6.0.2",
+]
+
+[project.urls]
+"Homepage" = "https://huggingface.co/spaces/iambhavyaa/sql-repair-env"
