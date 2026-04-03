@@ -39,12 +39,12 @@ def root():
     return RedirectResponse(url="/docs")
 
 
-#one environment instance per server process.
-#for multi-agent / parallel use, swap for a session-keyed dict.
+# One environment instance per server process.
+# For multi-agent / parallel use, swap for a session-keyed dict.
 env = SQLRepairEnv()
 
 
-# request / response models:
+# ── Request / Response models ─────────────────────────────────────────────────
 
 class ResetRequest(BaseModel):
     task_id: str = "task_easy"
@@ -64,7 +64,8 @@ class StepResponse(BaseModel):
     info: dict
 
 
-#endpoints:
+# ── Endpoints ─────────────────────────────────────────────────────────────────
+
 @app.get("/health")
 def health():
     """Liveness check — must return 200 for HF Space ping."""
@@ -72,11 +73,14 @@ def health():
 
 
 @app.post("/reset", response_model=Observation)
-def reset(req: ResetRequest):
+def reset(req: ResetRequest = None):
     """
     Start a new episode.
-    Pass task_id: "task_easy" | "task_medium" | "task_hard"
+    Pass task_id: "task_easy" | "task_medium" | "task_hard" | "task_expert"
+    An empty POST body defaults to task_easy.
     """
+    if req is None:
+        req = ResetRequest()
     try:
         obs = env.reset(task_id=req.task_id)
     except ValueError as e:
@@ -167,14 +171,14 @@ def baseline():
     api_key = os.getenv("OPENAI_API_KEY")
 
     if api_key:
-        #the real baseline agent
+        # Run the real baseline agent
         try:
             from baseline import run_baseline
             return run_baseline()
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Baseline run failed: {e}")
     else:
-        #demo mode — return scores for known-correct queries so the
+        # Demo mode — return scores for known-correct queries so the
         # /baseline endpoint always returns 200 even without an API key.
         demo_queries = {
             "task_easy": (
