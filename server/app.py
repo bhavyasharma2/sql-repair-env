@@ -26,12 +26,18 @@ except ImportError:
     from models import SQLRepairAction, SQLRepairObservation
     from server.sql_repair_environment import SQLRepairEnvironment
 
+from fastapi.responses import RedirectResponse
+
 app = create_app(
     SQLRepairEnvironment,
     SQLRepairAction,
     SQLRepairObservation,
     env_name="sql-repair-env",
 )
+
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse(url="/docs")
 
 
 def main():
