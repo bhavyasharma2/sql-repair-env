@@ -53,8 +53,7 @@ class SQLRepairObservation(Observation):
     step_number: int = 0
     max_steps: int = 5
 
-    # Reward breakdown (for transparency)
-    reward_breakdown: Optional[dict] = None
+
 
 
 @dataclass

@@ -108,11 +108,7 @@ class SQLRepairEnvironment(Environment):
 
         self._done = (breakdown["exact_match"] > 0) or (self._step_number >= MAX_STEPS)
 
-        obs = self._build_observation()
-        obs.reward_breakdown = breakdown
-        obs.reward = reward
-        obs.done = self._done
-        return obs
+        return self._build_observation()
 
     @property
     def state(self):
