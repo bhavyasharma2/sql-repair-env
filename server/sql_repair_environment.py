@@ -1,8 +1,8 @@
 """
 server/sql_repair_environment.py
 
-Core SQLRepairEnvironment class implementing the OpenEnv Environment interface.
-Uses DuckDB in-memory for fully isolated, deterministic SQL execution.
+Core SQLRepairEnvironment implementing the OpenEnv Environment interface.
+Uses DuckDB in-memory for isolated, deterministic SQL execution.
 """
 
 import uuid
@@ -11,65 +11,36 @@ from typing import Optional
 
 try:
     from openenv.core.env_server import Environment
-    from ..models import SQLRepairAction, SQLRepairObservation, SQLRepairState
+    from openenv.core.env_server import State as BaseState
+    from ..models import SQLRepairAction, SQLRepairObservation
     from ..tasks import TASKS
 except ImportError:
     from openenv.core.env_server import Environment
+    from openenv.core.env_server import State as BaseState
     import sys, os
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from models import SQLRepairAction, SQLRepairObservation, SQLRepairState
+    from models import SQLRepairAction, SQLRepairObservation
     from tasks import TASKS
 
 MAX_STEPS = 5
+TASK_ORDER = ["task_easy", "task_medium", "task_hard", "task_expert", "task_adversarial", "task_business"]
 
 
 class SQLRepairEnvironment(Environment):
     """
-    An RL environment where agents learn to diagnose and fix broken SQL queries.
+    RL environment where agents learn to fix broken SQL queries.
 
-    The agent receives:
-      - A database schema and sample data
-      - A broken SQL query
-      - A plain-English objective describing what the query should return
-
-    The agent must submit a corrected SQL query. The environment executes it
-    against an in-memory DuckDB instance and returns shaped reward:
-
-      +0.20  query is syntactically valid
-      +0.30  query executes without runtime error
-      +0.30  result has the correct number of rows
-      +0.20  result matches ground truth exactly
-      ──────
-       1.00  maximum (clamped to 0.001–0.999 for training stability)
-
-    Each episode uses a fresh, isolated DuckDB database.
+    Shaped reward per step (sums to 1.0, clamped to 0.001-0.999):
+      +0.20  syntax valid
+      +0.30  executes without error
+      +0.30  correct row count
+      +0.20  exact match with ground truth
     """
 
     def __init__(self) -> None:
         super().__init__()
-        self._task: Optional[dict] = None
-        self._conn: Optional[duckdb.DuckDBPyConnection] = None
-        self._step_number: int = 0
-        self._done: bool = False
-        self._best_reward: float = 0.001
-        self._last_query: Optional[str] = None
-        self._last_exec_result: Optional[str] = None
-        self._last_error: Optional[str] = None
-        self._last_reward: Optional[float] = None
-        self._episode_id: str = ""
-
-    # ── reset ─────────────────────────────────────────────────────────────────
-
-    def reset(self, task_id: str = "task_easy") -> SQLRepairObservation:
-        """
-        Start a new episode. Creates a fresh DuckDB instance with the task schema.
-        Returns the initial observation (no feedback yet).
-        """
-        if task_id not in TASKS:
-            # Default to easy if unknown task
-            task_id = "task_easy"
-
-        self._task = TASKS[task_id]
+        self._task = None
+        self._conn = None
         self._step_number = 0
         self._done = False
         self._best_reward = 0.001
@@ -77,32 +48,43 @@ class SQLRepairEnvironment(Environment):
         self._last_exec_result = None
         self._last_error = None
         self._last_reward = None
-        self._episode_id = str(uuid.uuid4())
+        self._task_index = 0
 
-        # Fresh isolated database for this episode
+    def reset(self, seed=None, episode_id=None, **kwargs):
+        task_id = kwargs.get("task_id", None)
+        if task_id and task_id in TASKS:
+            self._task = TASKS[task_id]
+        else:
+            if seed is not None:
+                idx = seed % len(TASK_ORDER)
+            else:
+                idx = self._task_index % len(TASK_ORDER)
+                self._task_index += 1
+            self._task = TASKS[TASK_ORDER[idx]]
+
+        self._step_number = 0
+        self._done = False
+        self._best_reward = 0.001
+        self._last_query = None
+        self._last_exec_result = None
+        self._last_error = None
+        self._last_reward = None
+
         self._conn = duckdb.connect(":memory:")
         self._conn.execute(self._task["schema_sql"])
         self._conn.execute(self._task["seed_sql"])
 
         return self._build_observation()
 
-    # ── step ──────────────────────────────────────────────────────────────────
-
-    def step(self, action: SQLRepairAction) -> SQLRepairObservation:
-        """
-        Execute the agent's proposed SQL query, compute reward, update state.
-        Returns next observation with execution feedback.
-        """
+    def step(self, action):
         if self._task is None or self._conn is None:
             self.reset()
-
         if self._done:
             return self._build_observation()
 
         self._step_number += 1
         self._last_query = action.query
 
-        # Execute the submitted query
         execution_result = None
         execution_error = None
 
@@ -118,55 +100,36 @@ class SQLRepairEnvironment(Environment):
             self._last_exec_result = f"ERROR: {execution_error}"
             self._last_error = execution_error
 
-        # Compute shaped reward
-        reward, breakdown = self._compute_reward(
-            action.query, execution_result, execution_error
-        )
+        reward, breakdown = self._compute_reward(action.query, execution_result, execution_error)
         self._last_reward = reward
 
         if reward > self._best_reward:
             self._best_reward = reward
 
-        # Episode ends on exact match or max steps
         self._done = (breakdown["exact_match"] > 0) or (self._step_number >= MAX_STEPS)
 
         obs = self._build_observation()
         obs.reward_breakdown = breakdown
+        obs.reward = reward
+        obs.done = self._done
         return obs
 
-    # ── state ─────────────────────────────────────────────────────────────────
-
     @property
-    def state(self) -> SQLRepairState:
-        return SQLRepairState(
-            task_id=self._task["task_id"] if self._task else "",
-            difficulty=self._task["difficulty"] if self._task else "",
-            step_number=self._step_number,
-            max_steps=MAX_STEPS,
-            done=self._done,
-            best_reward=self._best_reward,
-            current_query=self._last_query,
-            total_steps_taken=self._step_number,
-        )
+    def state(self):
+        s = BaseState()
+        s.step_count = self._step_number
+        s.task_id = self._task["task_id"] if self._task else ""
+        s.difficulty = self._task["difficulty"] if self._task else ""
+        s.max_steps = MAX_STEPS
+        s.done = self._done
+        s.best_reward = self._best_reward
+        s.current_query = self._last_query
+        return s
 
-    # ── Reward ────────────────────────────────────────────────────────────────
-
-    def _compute_reward(
-        self,
-        query: str,
-        execution_result: Optional[list],
-        execution_error: Optional[str],
-    ) -> tuple[float, dict]:
-        breakdown = {
-            "syntax_valid": 0.0,
-            "executes": 0.0,
-            "row_count_correct": 0.0,
-            "exact_match": 0.0,
-        }
-
+    def _compute_reward(self, query, execution_result, execution_error):
+        breakdown = {"syntax_valid": 0.0, "executes": 0.0, "row_count_correct": 0.0, "exact_match": 0.0}
         ground_truth = self._task["ground_truth"]
 
-        # 1. Syntax valid
         syntax_valid = bool(query and query.strip())
         if execution_error and any(
             kw in execution_error.lower()
@@ -176,26 +139,20 @@ class SQLRepairEnvironment(Environment):
         if syntax_valid:
             breakdown["syntax_valid"] = 0.20
 
-        # 2. Executes
         if execution_error is None and execution_result is not None:
             breakdown["executes"] = 0.30
 
-        # 3. Row count
         if execution_result is not None and len(execution_result) == len(ground_truth):
             breakdown["row_count_correct"] = 0.30
 
-        # 4. Exact match
         if breakdown["row_count_correct"] > 0 and execution_result is not None:
             if self._results_match(execution_result, ground_truth):
                 breakdown["exact_match"] = 0.20
 
-        total = sum(breakdown.values())
-        # Clamp strictly between 0 and 1 for training stability
-        total = max(0.001, min(0.999, round(total, 4)))
-
+        total = max(0.001, min(0.999, round(sum(breakdown.values()), 4)))
         return total, breakdown
 
-    def _results_match(self, actual: list, expected: list) -> bool:
+    def _results_match(self, actual, expected):
         if len(actual) != len(expected):
             return False
         for act_row, exp_row in zip(actual, expected):
@@ -219,9 +176,7 @@ class SQLRepairEnvironment(Environment):
                         return False
         return True
 
-    # ── Helpers ───────────────────────────────────────────────────────────────
-
-    def _build_observation(self) -> SQLRepairObservation:
+    def _build_observation(self):
         assert self._task is not None
         return SQLRepairObservation(
             task_id=self._task["task_id"],
@@ -238,7 +193,7 @@ class SQLRepairEnvironment(Environment):
             max_steps=MAX_STEPS,
         )
 
-    def _format_result(self, rows: list) -> str:
+    def _format_result(self, rows):
         if not rows:
             return "(no rows returned)"
         cols = list(rows[0].keys())
