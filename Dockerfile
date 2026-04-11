@@ -6,14 +6,14 @@ ENV PATH="/home/user/.local/bin:$PATH"
 
 WORKDIR /app
 
-COPY --chown=user requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY --chown=user pyproject.toml .
+RUN pip install --no-cache-dir "openenv-core>=0.2.0" duckdb fastapi "uvicorn[standard]" pydantic openai requests pyyaml
 
-COPY --chown=user app/ ./app/
-COPY --chown=user baseline.py .
-COPY --chown=user inference.py .
-COPY --chown=user openenv.yaml .
+COPY --chown=user . .
 
 EXPOSE 7860
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:7860/health')"
+
+CMD ["python", "-m", "uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]

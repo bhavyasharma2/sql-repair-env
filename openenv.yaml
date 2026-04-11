@@ -1,108 +1,82 @@
 name: sql-repair-env
-version: "1.0.0"
+version: "2.0.0"
 description: >
   An RL environment where agents learn to diagnose and fix broken SQL queries.
-  Three tasks of increasing difficulty: syntax errors (easy), wrong join
-  semantics (medium), and silent semantic errors (hard). Graders are fully
-  deterministic — results are compared against ground-truth row sets using
-  DuckDB in-memory execution.
+  Six tasks of increasing difficulty covering real-world SQL bug patterns:
+  syntax errors, wrong JOINs, window function bugs, recursive CTEs,
+  aggregation misuse, and multi-CTE date logic errors.
+  Graders are fully deterministic using DuckDB in-memory execution.
 
 tags:
   - openenv
   - sql
   - code-repair
-  - real-world
   - debugging
+  - real-world
 
-author: "SQL Repair Env"
+author: "Bhavya Sharma"
 license: MIT
 
 tasks:
   - id: task_easy
     difficulty: easy
-    description: "Fix syntax errors in a simple SELECT query"
+    description: "Fix syntax errors — typo FORM→FROM and missing comma"
     max_steps: 5
 
   - id: task_medium
     difficulty: medium
-    description: "Fix wrong JOIN type and HAVING clause referencing wrong column"
+    description: "Fix wrong JOIN type (INNER→LEFT) and HAVING on wrong alias"
     max_steps: 5
 
   - id: task_hard
     difficulty: hard
-    description: "Fix a window function partitioned by wrong column (silent bug)"
+    description: "Fix ROW_NUMBER() partitioned by wrong column (silent semantic error)"
     max_steps: 5
 
   - id: task_expert
     difficulty: expert
-    description: "Fix two bugs in a recursive CTE traversing an org chart"
+    description: "Fix recursive CTE — wrong anchor condition + wrong recursive join"
+    max_steps: 5
+
+  - id: task_adversarial
+    difficulty: adversarial
+    description: "Fix aggregate in WHERE clause — move SUM() to HAVING"
+    max_steps: 5
+
+  - id: task_business
+    difficulty: business
+    description: "Fix wrong date truncation unit in multi-CTE monthly revenue analysis"
     max_steps: 5
 
 observation_space:
   type: object
   fields:
-    - name: task_id
-      type: string
-    - name: difficulty
-      type: string
-      enum: [easy, medium, hard]
-    - name: schema_sql
-      type: string
-      description: "CREATE TABLE statements for the database"
-    - name: sample_data
-      type: string
-      description: "INSERT statements with seed rows"
-    - name: broken_query
-      type: string
-      description: "The SQL query that needs to be fixed"
-    - name: objective
-      type: string
-      description: "Natural language description of what the query should return"
-    - name: last_action
-      type: string
-      nullable: true
-    - name: last_execution_result
-      type: string
-      nullable: true
-    - name: last_reward
-      type: number
-      nullable: true
-    - name: step_number
-      type: integer
-    - name: max_steps
-      type: integer
+    - {name: task_id,               type: string}
+    - {name: difficulty,            type: string}
+    - {name: schema_sql,            type: string}
+    - {name: sample_data,           type: string}
+    - {name: broken_query,          type: string}
+    - {name: objective,             type: string}
+    - {name: last_query,            type: string,  nullable: true}
+    - {name: last_execution_result, type: string,  nullable: true}
+    - {name: last_reward,           type: number,  nullable: true}
+    - {name: last_error,            type: string,  nullable: true}
+    - {name: step_number,           type: integer}
+    - {name: max_steps,             type: integer}
+    - {name: reward_breakdown,      type: object,  nullable: true}
 
 action_space:
   type: object
-  required:
-    - query
+  required: [query]
   fields:
-    - name: query
-      type: string
-      description: "The repaired SQL query the agent proposes"
-    - name: explanation
-      type: string
-      nullable: true
-      description: "Optional explanation of the fix"
+    - {name: query,       type: string}
+    - {name: explanation, type: string, nullable: true}
 
 reward:
-  range: [0.0, 1.0]
+  range: [0.001, 0.999]
   shaped: true
   components:
-    - name: syntax_valid
-      weight: 0.20
-    - name: executes
-      weight: 0.30
-    - name: row_count_correct
-      weight: 0.30
-    - name: exact_match
-      weight: 0.20
-
-endpoints:
-  reset: POST /reset
-  step: POST /step
-  state: GET /state
-  tasks: GET /tasks
-  grader: POST /grader
-  baseline: GET /baseline
-  health: GET /health
+    - {name: syntax_valid,      weight: 0.20}
+    - {name: executes,          weight: 0.30}
+    - {name: row_count_correct, weight: 0.30}
+    - {name: exact_match,       weight: 0.20}
